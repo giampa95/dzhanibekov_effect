@@ -1,1 +1,1 @@
-Implementation of Modelica models to simulate Dzhanibekov effect, as proof of Tennis Racket theorem.
+Implementation of Modelica models to simulate Dzhanibekov effect as a proof of Tennis Racket theorem.
