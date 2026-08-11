@@ -2,27 +2,27 @@ model rectangular_prism
   
   // Dzhanibekov effect can be seen by imposing initial rotation in the 2-axis.
   
-  parameter Real density = 1;
-  parameter Real lenght_1 = 1;
-  parameter Real lenght_2 = 3;
-  parameter Real lenght_3 = 12;
+  parameter Modelica.Units.SI.Density density = 1 "density of the body";
+  parameter Modelica.Units.SI.Length lenght_1 = 1 "body lenght along 1-axis";
+  parameter Modelica.Units.SI.Length lenght_2 = 3 "body lenght along 2-axis";
+  parameter Modelica.Units.SI.Length lenght_3 = 12 "body lenght along 3-axis";
   
-  final parameter Real mass = density*lenght_1*lenght_2*lenght_3 "mass of the body";
-  final parameter Real inertia_11 = (1/12)*mass*(lenght_2^2 + lenght_3^2) "1-axis inertia of the body";
-  final parameter Real inertia_22 = (1/12)*mass*(lenght_1^2 + lenght_3^2) "2-axis inertia of the body";
-  final parameter Real inertia_33 = (1/12)*mass*(lenght_1^2 + lenght_2^2) "3-axis inertia of the body";
-  final parameter Real r_cm[3] = {0, 0, 0} "center of mass of the body";
-  final parameter Real r_0[3] = { 0, 0, 0} "initial position";
-  final parameter Real v_0[3] = { 0, 0, 0} "initial velocity";
-  final parameter Real alpha_0[3] = { 0, 0, 0} "initial angle";
+  final parameter Modelica.Units.SI.Mass mass mass = density*lenght_1*lenght_2*lenght_3 "mass of the body";
+  final parameter Modelica.Units.SI.MomentOfInertia inertia_11 = (1/12)*mass*(lenght_2^2 + lenght_3^2) "1-axis inertia of the body";
+  final parameter Modelica.Units.SI.MomentOfInertia inertia_22 = (1/12)*mass*(lenght_1^2 + lenght_3^2) "2-axis inertia of the body";
+  final parameter Modelica.Units.SI.MomentOfInertia inertia_33 = (1/12)*mass*(lenght_1^2 + lenght_2^2) "3-axis inertia of the body";
+  final parameter Modelica.Units.SI.Position r_cm[3] = {0, 0, 0} "center of mass of the body";
+  final parameter Modelica.Units.SI.Position r_0[3] = { 0, 0, 0} "initial position";
+  final parameter Modelica.Units.SI.Velocity v_0[3] = { 0, 0, 0} "initial velocity";
+  final parameter Modelica.Units.SI.Angle alpha_0[3] = { 0, 0, 0} "initial angle";
   
   parameter Real omega_0_1_rpm = 1e-3 "1-axis initial rotation";
   parameter Real omega_0_2_rpm = 30   "2-axis initial rotation";
   parameter Real omega_0_3_rpm = 1e-3 "3-axis initial rotation";
-  final parameter Real omega_0_1_radps = (Modelica.Constants.pi / 30) * omega_0_1_rpm; 
-  final parameter Real omega_0_2_radps = (Modelica.Constants.pi / 30) * omega_0_2_rpm; 
-  final parameter Real omega_0_3_radps = (Modelica.Constants.pi / 30) * omega_0_3_rpm; 
-  final parameter Real omega_0[3] = { omega_0_1_radps, omega_0_2_radps, omega_0_3_radps} "initial rotation";
+  final parameter Modelica.Units.SI.AngularVelocity omega_0_1_radps = (Modelica.Constants.pi / 30) * omega_0_1_rpm; 
+  final parameter Modelica.Units.SI.AngularVelocity omega_0_2_radps = (Modelica.Constants.pi / 30) * omega_0_2_rpm; 
+  final parameter Modelica.Units.SI.AngularVelocity omega_0_3_radps = (Modelica.Constants.pi / 30) * omega_0_3_rpm; 
+  final parameter Modelica.Units.SI.AngularVelocity omega_0[3] = { omega_0_1_radps, omega_0_2_radps, omega_0_3_radps} "initial rotation";
   
   inner Modelica.Mechanics.MultiBody.World 
     world(
@@ -64,6 +64,6 @@ equation
 
 annotation(
     uses(Modelica(version = "4.0.0")),
-    experiment(StartTime = 0, StopTime = 60, Tolerance = 1e-06, Interval = 0.10));
+    experiment(StartTime = 0, StopTime = 30, Tolerance = 1e-06, Interval = 0.10));
 
 end rectangular_prism;
