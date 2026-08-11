@@ -1,13 +1,14 @@
 model rectangular_prism
   
-  // Dzhanibekov effect can be seen by imposing initial rotation in the 2-axis.
+  // Dzhanibekov effect can be seen by imposing initial rotation in the intermediate inertia axis.
+  // In this example, it corresponds to the 2-axis in this example.
   
   parameter Modelica.Units.SI.Density density = 1 "density of the body";
   parameter Modelica.Units.SI.Length lenght_1 = 1 "body lenght along 1-axis";
   parameter Modelica.Units.SI.Length lenght_2 = 3 "body lenght along 2-axis";
   parameter Modelica.Units.SI.Length lenght_3 = 12 "body lenght along 3-axis";
   
-  final parameter Modelica.Units.SI.Mass mass mass = density*lenght_1*lenght_2*lenght_3 "mass of the body";
+  final parameter Modelica.Units.SI.Mass mass = density*lenght_1*lenght_2*lenght_3 "mass of the body";
   final parameter Modelica.Units.SI.MomentOfInertia inertia_11 = (1/12)*mass*(lenght_2^2 + lenght_3^2) "1-axis inertia of the body";
   final parameter Modelica.Units.SI.MomentOfInertia inertia_22 = (1/12)*mass*(lenght_1^2 + lenght_3^2) "2-axis inertia of the body";
   final parameter Modelica.Units.SI.MomentOfInertia inertia_33 = (1/12)*mass*(lenght_1^2 + lenght_2^2) "3-axis inertia of the body";
@@ -16,9 +17,10 @@ model rectangular_prism
   final parameter Modelica.Units.SI.Velocity v_0[3] = { 0, 0, 0} "initial velocity";
   final parameter Modelica.Units.SI.Angle alpha_0[3] = { 0, 0, 0} "initial angle";
   
-  parameter Real omega_0_1_rpm = 1e-3 "1-axis initial rotation";
-  parameter Real omega_0_2_rpm = 30   "2-axis initial rotation";
-  parameter Real omega_0_3_rpm = 1e-3 "3-axis initial rotation";
+  parameter Real omega_0_1_rpm = 1e-3   "1-axis initial rotation";
+  parameter Real omega_0_2_rpm = 30.0   "2-axis initial rotation";
+  parameter Real omega_0_3_rpm = 1e-3   "3-axis initial rotation";
+  
   final parameter Modelica.Units.SI.AngularVelocity omega_0_1_radps = (Modelica.Constants.pi / 30) * omega_0_1_rpm; 
   final parameter Modelica.Units.SI.AngularVelocity omega_0_2_radps = (Modelica.Constants.pi / 30) * omega_0_2_rpm; 
   final parameter Modelica.Units.SI.AngularVelocity omega_0_3_radps = (Modelica.Constants.pi / 30) * omega_0_3_rpm; 
