@@ -1,25 +1,30 @@
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Sequence, Union
 import numpy as np
 import trimesh
+
+# Type alias for scale input
+ScaleType = Union[float, int, Sequence[float], np.ndarray]
 
 
 class Body:
     """Computes physical properties (volume, mass, COM, inertia tensor) for 3D STL/OBJ models,
 
-    supporting uniform, group-level, or object-level material densities.
+    supporting uniform, group-level, or object-level material densities,
+    as well as dynamic uniform or directional anisotropic scaling.
     """
 
     def __init__(
         self,
         model: Optional[Union[str, Path]] = None,
-        scale: float = 1.0,
+        scale: ScaleType = 1.0,
         density: float = 1000.0,
         groups_density: Optional[Union[dict, str, Path]] = None,
         objects_density: Optional[Union[dict, str, Path]] = None,
     ):
-        self.scale: float = scale
+        self._scale: Union[float, np.ndarray] = 1.0
+        self.scale = scale  # Uses setter validation
         self.density: float = density
         self.groups_density: Dict[str, float] = self._parse_density_input(
             groups_density
@@ -40,13 +45,56 @@ class Body:
             )
 
     # ------------------------------------------------------------------
+    # Properties & Helper Validation
+    # ------------------------------------------------------------------
+
+    @property
+    def scale(self) -> Union[float, np.ndarray]:
+        """Returns the current scale setting."""
+        return self._scale
+
+    @scale.setter
+    def scale(self, value: ScaleType) -> None:
+        """Sets and validates the scale setting."""
+        self._scale = self._validate_scale(value)
+
+    def _validate_scale(self, scale: ScaleType) -> Union[float, np.ndarray]:
+        """Validates scale input to be either a positive float or a 3-element sequence [sx, sy, sz]."""
+        if isinstance(scale, (int, float, np.number)):
+            val = float(scale)
+            if val <= 0:
+                raise ValueError(f"Scale must be positive, got {val}")
+            return val
+
+        try:
+            arr = np.asarray(scale, dtype=np.float64)
+            if arr.ndim == 0:
+                val = float(arr)
+                if val <= 0:
+                    raise ValueError(f"Scale must be positive, got {val}")
+                return val
+            elif arr.shape == (3,):
+                if np.any(arr <= 0):
+                    raise ValueError(
+                        f"All scale components must be positive, got {arr}"
+                    )
+                return arr
+        except Exception as e:
+            if isinstance(e, ValueError):
+                raise e
+
+        raise ValueError(
+            f"Invalid scale value '{scale}'. Expected a positive float or a 3-element sequence [scale_x, scale_y, scale_z]."
+        )
+
+    # ------------------------------------------------------------------
     # Loading & Configuration
     # ------------------------------------------------------------------
 
     def load(
         self,
         model: Union[str, Path],
-        scale: Optional[float] = None,
+        scale: Optional[ScaleType] = None,
         density: Optional[float] = None,
         groups_density: Optional[Union[dict, str, Path]] = None,
         objects_density: Optional[Union[dict, str, Path]] = None,
@@ -69,8 +117,8 @@ class Body:
         ext = self.model_path.suffix.lower()
 
         if ext == ".obj":
-            # Attempt parsing via direct OBJ tag parser to preserve exact 'o' and 'g' names
-            self.submeshes = self._parse_obj_tags(self.model_path, self.scale)
+            # Parsing via direct OBJ tag parser to preserve exact 'o' and 'g' names
+            self.submeshes = self._parse_obj_tags(self.model_path)
 
         if not self.submeshes:
             loaded = trimesh.load(
@@ -83,7 +131,6 @@ class Body:
                 for geom_name, mesh_obj in loaded.geometry.items():
                     m = mesh_obj.copy()
 
-                    # Extract target name from metadata ('object' or 'group') before geometry key
                     name = (
                         m.metadata.get("object")
                         or m.metadata.get("group")
@@ -91,16 +138,16 @@ class Body:
                         or geom_name
                     )
 
-                    m.apply_scale(self.scale)
+                    # Store original unscaled mesh
                     self._process_and_store_mesh(name, m)
 
             elif isinstance(loaded, trimesh.Trimesh):
                 m = loaded.copy()
-                m.apply_scale(self.scale)
+                # Store original unscaled mesh
                 self._process_and_store_mesh("default", m)
 
     def _process_and_store_mesh(self, name: str, mesh: trimesh.Trimesh) -> None:
-        """Validates mesh watertightness, corrects face orientation, and stores submesh."""
+        """Validates mesh watertightness, corrects face orientation, and stores original unscaled submesh."""
         if not mesh.is_watertight:
             print(
                 f"Submesh '{name}' is not watertight; mass/volume calculations may be inaccurate."
@@ -112,10 +159,8 @@ class Body:
 
         self.submeshes[name] = mesh
 
-    def _parse_obj_tags(
-        self, file_path: Path, scale: float
-    ) -> Dict[str, trimesh.Trimesh]:
-        """Parses OBJ file line-by-line to extract geometries grouped by 'o' (object) or 'g' (group) tags."""
+    def _parse_obj_tags(self, file_path: Path) -> Dict[str, trimesh.Trimesh]:
+        """Parses OBJ file line-by-line to extract original unscaled geometries grouped by 'o' or 'g' tags."""
         vertices = []
         submesh_faces: Dict[str, list] = {}
         current_tag = "default"
@@ -143,7 +188,6 @@ class Body:
                         face_v.append(idx)
 
                     if len(face_v) >= 3:
-                        # Triangulate polygons if needed
                         for i in range(1, len(face_v) - 1):
                             submesh_faces.setdefault(current_tag, []).append(
                                 [face_v[0], face_v[i], face_v[i + 1]]
@@ -158,7 +202,7 @@ class Body:
         for tag, faces in submesh_faces.items():
             f_arr = np.array(faces, dtype=np.int64)
             unique_v_idx, reindexed_f = np.unique(f_arr, return_inverse=True)
-            sub_v = v_arr[unique_v_idx] * scale
+            sub_v = v_arr[unique_v_idx]  # Unscaled vertices
             sub_f = reindexed_f.reshape(f_arr.shape)
 
             m = trimesh.Trimesh(vertices=sub_v, faces=sub_f, process=True)
@@ -211,6 +255,26 @@ class Body:
             return {target: self.submeshes[target]}
         return self.submeshes
 
+    def _get_scaled_submesh(self, name: str) -> trimesh.Trimesh:
+        """Returns a copy of the submesh scaled according to current self.scale."""
+        mesh = self.submeshes[name].copy()
+
+        # Optimization: skip scaling if scale is identity
+        if isinstance(self.scale, (int, float, np.number)) and float(self.scale) == 1.0:
+            return mesh
+        if isinstance(self.scale, np.ndarray) and np.array_equal(self.scale, [1.0, 1.0, 1.0]):
+            return mesh
+
+        mesh.apply_scale(self.scale)
+        return mesh
+
+    def _get_scaled_targets(
+        self, group: Optional[str] = None, obj: Optional[str] = None
+    ) -> Dict[str, trimesh.Trimesh]:
+        """Filters submeshes and returns copies scaled to current scale setting."""
+        unscaled_targets = self._filter_submeshes(group=group, obj=obj)
+        return {name: self._get_scaled_submesh(name) for name in unscaled_targets}
+
     # ------------------------------------------------------------------
     # Query Methods
     # ------------------------------------------------------------------
@@ -228,13 +292,13 @@ class Body:
     def compute_volume(
         self, group: Optional[str] = None, object: Optional[str] = None
     ) -> float:
-        targets = self._filter_submeshes(group=group, obj=object)
+        targets = self._get_scaled_targets(group=group, obj=object)
         return float(sum(mesh.volume for mesh in targets.values()))
 
     def compute_mass(
         self, group: Optional[str] = None, object: Optional[str] = None
     ) -> float:
-        targets = self._filter_submeshes(group=group, obj=object)
+        targets = self._get_scaled_targets(group=group, obj=object)
         total_mass = 0.0
         for name, mesh in targets.items():
             rho = self._get_density_for_key(name)
@@ -244,7 +308,7 @@ class Body:
     def compute_com(
         self, group: Optional[str] = None, object: Optional[str] = None
     ) -> np.ndarray:
-        targets = self._filter_submeshes(group=group, obj=object)
+        targets = self._get_scaled_targets(group=group, obj=object)
         total_mass = 0.0
         weighted_com = np.zeros(3)
 
@@ -264,7 +328,7 @@ class Body:
         group: Optional[str] = None,
         object: Optional[str] = None,
     ) -> np.ndarray:
-        targets = self._filter_submeshes(group=group, obj=object)
+        targets = self._get_scaled_targets(group=group, obj=object)
 
         ref_point = (
             np.array(x, dtype=float)
@@ -292,28 +356,64 @@ class Body:
 
         return 0.5 * (I_total + I_total.T)
 
-    def compute_principal_axes(self, x=None):
-        I = self.compute_inertia(x=x)
+    def compute_principal_inertia(
+        self,
+        x: Optional[Union[np.ndarray, list, tuple]] = None,
+        group: Optional[str] = None,
+        object: Optional[str] = None,
+    ) -> List[Dict[str, Union[float, np.ndarray]]]:
+        """Computes principal moments of inertia and their associated normalized principal axes.
+
+        Returns a list of dictionaries containing paired moments and normalized column vectors,
+        sorted by ascending moment magnitude.
+        """
+        I = self.compute_inertia(x=x, group=group, object=object)
         eigenvalues, eigenvectors = np.linalg.eigh(I)
+
+        # Sort by moment size
         sort_idx = np.argsort(eigenvalues)
+        moments = eigenvalues[sort_idx]
         axes = eigenvectors[:, sort_idx]
 
+        # Preserve right-handed coordinate frame
         if np.linalg.det(axes) < 0:
             axes[:, 2] *= -1
 
-        return axes
+        # Explicitly normalize each principal axis vector
+        axes = axes / np.linalg.norm(axes, axis=0)
 
-    def compute_principal_moments(self, x=None):
-        I = self.compute_inertia(x=x)
-        eigenvalues = np.linalg.eigvalsh(I)
-        return np.sort(eigenvalues)
+        return [
+            {"moment": float(moments[i]), "axis": axes[:, i]}
+            for i in range(3)
+        ]
 
-    def compute_all(
+
+    def compute_bounds(
         self, group: Optional[str] = None, object: Optional[str] = None
-    ) -> dict:
-        return {
-            "volume": self.compute_volume(group=group, object=object),
-            "mass": self.compute_mass(group=group, object=object),
-            "com": self.compute_com(group=group, object=object),
-            "inertia": self.compute_inertia(group=group, object=object),
-        }
+    ) -> List[Dict[str, float]]:
+        """Computes min, max, and bounding size (max - min) for each Cartesian direction (X, Y, Z).
+
+        Returns a list of 3 dictionaries (index 0=X, 1=Y, 2=Z) containing:
+        - 'min': minimum coordinate value
+        - 'max': maximum coordinate value
+        - 'size': bounding length (max - min)
+        """
+        targets = self._get_scaled_targets(group=group, obj=object)
+        if not targets:
+            return [{"min": 0.0, "max": 0.0, "size": 0.0} for _ in range(3)]
+
+        mins = np.array([mesh.bounds[0] for mesh in targets.values()])
+        maxs = np.array([mesh.bounds[1] for mesh in targets.values()])
+
+        overall_min = np.min(mins, axis=0)
+        overall_max = np.max(maxs, axis=0)
+        overall_size = overall_max - overall_min
+
+        return [
+            {
+                "min": float(overall_min[i]),
+                "max": float(overall_max[i]),
+                "size": float(overall_size[i]),
+            }
+            for i in range(3)
+        ]

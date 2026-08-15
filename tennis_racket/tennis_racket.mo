@@ -2,27 +2,33 @@ model tennis_racket
 
   // Dzhanibekov effect can be seen by imposing initial rotation in the intermediate inertia axis.
   // In this example, it corresponds to the 1-axis in this example.
+    
+  final parameter String cad_path 
+    = "modelica://tennis_racket/model/10540_Tennis_racket_V2_L3.obj";
+  parameter Real scale = 0.01 "scale factor for CAD mesh and visualization";
+  
+  final parameter Real scale_axes = 0.2*(1/scale);
+  
+  final parameter Modelica.Units.SI.Mass mass = 7.771512e-01 "mass of the body"; 
+  
+  final parameter Modelica.Units.SI.MomentOfInertia inertia_11 = +2.953002e-02  "11 entry of inertia tensor";
+  final parameter Modelica.Units.SI.MomentOfInertia inertia_22 = +3.414998e-02  "22 entry of inertia tensor";
+  final parameter Modelica.Units.SI.MomentOfInertia inertia_33 = +4.655690e-03  "33 entry of inertia tensor";
+  final parameter Modelica.Units.SI.MomentOfInertia inertia_21 = +3.073764e-08  "21/12 cross entry of inertia tensor";
+  final parameter Modelica.Units.SI.MomentOfInertia inertia_31 = +5.636889e-06  "31/13 cross entry of inertia tensor";
+  final parameter Modelica.Units.SI.MomentOfInertia inertia_32 = -9.778107e-06 "32/23 cross entry of inertia tensor";
 
-  final parameter String cad_path = "modelica://tennis_racket/model/10540_Tennis_racket_V2_L3.obj";
-
-  final parameter Real scale = 0.008 "scale factor for CAD mesh and visualization";
-  final parameter Modelica.Units.SI.Mass mass = 0.397901 "mass of the body";
-
-  final parameter Modelica.Units.SI.MomentOfInertia inertia_11 = 0.009676  "11 entry of inertia tensor";
-  final parameter Modelica.Units.SI.MomentOfInertia inertia_22 = 0.001526  "22 entry of inertia tensor";
-  final parameter Modelica.Units.SI.MomentOfInertia inertia_33 = 0.011190  "33 entry of inertia tensor";
-  final parameter Modelica.Units.SI.MomentOfInertia inertia_21 = 0.000002  "21/12 cross entry of inertia tensor";
-  final parameter Modelica.Units.SI.MomentOfInertia inertia_31 = 0.000000  "31/13 cross entry of inertia tensor";
-  final parameter Modelica.Units.SI.MomentOfInertia inertia_32 = -0.000003 "32/23 cross entry of inertia tensor";
-
-  final parameter Modelica.Units.SI.Position r_cm[3] = {0.000341, 0.084665, 0.004965} "center of mass of the body";
+  final parameter Modelica.Units.SI.Position r_cm[3] 
+    = {4.263154e-04, 6.205808e-03, 1.058315e-01} "center of mass of the body";
+  
   final parameter Modelica.Units.SI.Position r_0[3] = {0, 0, 0} "initial position";
-  final parameter Modelica.Units.SI.Velocity v_0[3] = {0, 5, 0} "initial velocity";
-  final parameter Modelica.Units.SI.Angle alpha_0[3] = {0, Modelica.Constants.pi, 0} "initial angle";
+  final parameter Modelica.Units.SI.Velocity v_0[3] = {0, 4, 0} "initial velocity";
+  final parameter Modelica.Units.SI.Angle alpha_0[3] 
+    = {0.25*Modelica.Constants.pi, Modelica.Constants.pi, 0} "initial angle";
 
-  parameter Real omega_0_1_rpm = 60.0   "1-axis initial rotation (intermediate inertia axis)";
+  parameter Real omega_0_1_rpm = 120.0   "1-axis initial rotation (intermediate inertia axis)";
   parameter Real omega_0_2_rpm = 5.0    "2-axis initial rotation";
-  parameter Real omega_0_3_rpm = 5.0    "3-axis initial rotation";
+  parameter Real omega_0_3_rpm = -5.0    "3-axis initial rotation";
   
   final parameter Modelica.Units.SI.AngularVelocity omega_0_1_radps 
     = (Modelica.Constants.pi / 30) * omega_0_1_rpm; 
@@ -35,7 +41,7 @@ model tennis_racket
 
   inner Modelica.Mechanics.MultiBody.World 
     world(
-      g = 0*Modelica.Constants.g_n
+      g = Modelica.Constants.g_n, axisLength = scale_axes
       ) annotation(
     Placement(transformation(origin = {50, 10}, extent = {{-10, -10}, {10, 10}})));
 
@@ -54,14 +60,13 @@ model tennis_racket
       ) annotation(
     Placement(transformation(origin = {-30, 10}, extent = {{-10, -10}, {10, 10}}, rotation = 180)));
 
-  Modelica.Mechanics.MultiBody.Visualizers.FixedFrame fixedFrame annotation(
+  Modelica.Mechanics.MultiBody.Visualizers.FixedFrame fixedFrame(length = scale_axes)  annotation(
     Placement(transformation(origin = {10, 10}, extent = {{-10, -10}, {10, 10}})));
 
   Modelica.Mechanics.MultiBody.Visualizers.FixedShape 
-    fixedShape(
-        length = scale, width = scale, height = scale,
+    fixedShape(       
         shapeType = cad_path,
-        specularCoefficient=0.1
+        specularCoefficient=0.1, length = scale, width = scale, height = scale
       ) annotation(
     Placement(transformation(origin = {-20, 40}, extent = {{-10, -10}, {10, 10}}, rotation = 90)));
 
@@ -75,6 +80,6 @@ equation
 
 annotation(
     uses(Modelica(version = "4.0.0")),
-    experiment(StartTime = 0, StopTime = 1.6, Tolerance = 1e-08, Interval = 0.10));
+    experiment(StartTime = 0, StopTime = 1, Tolerance = 1e-08, Interval = 0.01));
 
 end tennis_racket;
