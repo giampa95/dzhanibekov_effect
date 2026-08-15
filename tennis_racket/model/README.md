@@ -1,1 +1,0 @@
-3D CAD file avaiable at https://free3d.com/3d-model/tennis-racket-v3--693257.html

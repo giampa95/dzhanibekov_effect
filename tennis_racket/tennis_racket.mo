@@ -1,13 +1,13 @@
 model tennis_racket
 
-  // Dzhanibekov effect can be seen by imposing initial rotation in the intermediate inertia axis.
+// Dzhanibekov effect can be seen by imposing initial rotation in the intermediate inertia axis.
   // In this example, it corresponds to the 1-axis in this example.
-    
   final parameter String cad_path 
     = "modelica://tennis_racket/model/10540_Tennis_racket_V2_L3.obj";
   parameter Real scale = 0.01 "scale factor for CAD mesh and visualization";
   
-  final parameter Real scale_axes = 0.2*(1/scale);
+  final parameter Modelica.Units.SI.Position 
+    lenght_axes = 0.5; // To be fixed
   
   final parameter Modelica.Units.SI.Mass mass = 7.771512e-01 "mass of the body"; 
   
@@ -41,7 +41,7 @@ model tennis_racket
 
   inner Modelica.Mechanics.MultiBody.World 
     world(
-      g = Modelica.Constants.g_n, axisLength = scale_axes
+      g = Modelica.Constants.g_n, axisLength = lenght_axes
       ) annotation(
     Placement(transformation(origin = {50, 10}, extent = {{-10, -10}, {10, 10}})));
 
@@ -60,13 +60,12 @@ model tennis_racket
       ) annotation(
     Placement(transformation(origin = {-30, 10}, extent = {{-10, -10}, {10, 10}}, rotation = 180)));
 
-  Modelica.Mechanics.MultiBody.Visualizers.FixedFrame fixedFrame(length = scale_axes)  annotation(
+  Modelica.Mechanics.MultiBody.Visualizers.FixedFrame fixedFrame(length = lenght_axes)  annotation(
     Placement(transformation(origin = {10, 10}, extent = {{-10, -10}, {10, 10}})));
 
   Modelica.Mechanics.MultiBody.Visualizers.FixedShape 
     fixedShape(       
-        shapeType = cad_path,
-        specularCoefficient=0.1, length = scale, width = scale, height = scale
+        shapeType = cad_path, length = scale, width = scale, height = scale
       ) annotation(
     Placement(transformation(origin = {-20, 40}, extent = {{-10, -10}, {10, 10}}, rotation = 90)));
 
