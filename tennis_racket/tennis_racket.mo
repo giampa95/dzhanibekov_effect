@@ -3,11 +3,11 @@ model tennis_racket
 // Dzhanibekov effect can be seen by imposing initial rotation in the intermediate inertia axis.
   // In this example, it corresponds to the 1-axis in this example.
   final parameter String cad_path 
-    = "modelica://tennis_racket/model/10540_Tennis_racket_V2_L3.obj";
+    = "modelica://tennis_racket/model/10540_Tennis_racket_V2_L3_scaled.obj";
   parameter Real scale = 0.01 "scale factor for CAD mesh and visualization";
   
   final parameter Modelica.Units.SI.Position 
-    lenght_axes = 0.5; // To be fixed
+    lenght_axes = 0.5; 
   
   final parameter Modelica.Units.SI.Mass mass = 7.771512e-01 "mass of the body"; 
   

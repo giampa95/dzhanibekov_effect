@@ -8,6 +8,8 @@ model rectangular_prism
   parameter Modelica.Units.SI.Length lenght_2 = 3 "body lenght along 2-axis";
   parameter Modelica.Units.SI.Length lenght_3 = 12 "body lenght along 3-axis";
   
+  parameter Modelica.Units.SI.Length lenght_axes = 3;
+  
   final parameter Modelica.Units.SI.Mass mass = density*lenght_1*lenght_2*lenght_3 "mass of the body";
   final parameter Modelica.Units.SI.MomentOfInertia inertia_11 = (1/12)*mass*(lenght_2^2 + lenght_3^2) "1-axis inertia of the body";
   final parameter Modelica.Units.SI.MomentOfInertia inertia_22 = (1/12)*mass*(lenght_1^2 + lenght_3^2) "2-axis inertia of the body";
@@ -28,7 +30,7 @@ model rectangular_prism
   
   inner Modelica.Mechanics.MultiBody.World 
     world(
-      g = 0
+      g = 0*Modelica.Constants.g_n, axisLength = lenght_axes
       ) annotation(
     Placement(transformation(origin = {50, 10}, extent = {{-10, -10}, {10, 10}})));
   
@@ -46,7 +48,7 @@ model rectangular_prism
       ) annotation(
     Placement(transformation(origin = {-30, 10}, extent = {{-10, -10}, {10, 10}}, rotation = 180)));
   
-  Modelica.Mechanics.MultiBody.Visualizers.FixedFrame fixedFrame annotation(
+  Modelica.Mechanics.MultiBody.Visualizers.FixedFrame fixedFrame(length = lenght_axes) annotation(
     Placement(transformation(origin = {10, 10}, extent = {{-10, -10}, {10, 10}})));
   
   Modelica.Mechanics.MultiBody.Visualizers.FixedShape 
