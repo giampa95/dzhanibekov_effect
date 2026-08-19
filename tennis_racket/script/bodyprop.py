@@ -170,7 +170,10 @@ class Body:
                 self._process_and_store_mesh("default", m)
 
     def save(self, filepath: Union[str, Path]) -> None:
-        """Saves the internally scaled model automatically to the given file path in ASCII STL or OBJ format."""
+        """Saves the internally scaled model automatically to the given file path in ASCII STL or OBJ format.
+
+        If the source file is an OBJ, architecture, materials, and comments are preserved.
+        """
         filepath = Path(filepath)
 
         if not self.submeshes:
@@ -179,7 +182,11 @@ class Body:
         filepath.parent.mkdir(parents=True, exist_ok=True)
         ext = filepath.suffix.lower()
 
-        if ext == ".obj":
+        # Architecture-preserving OBJ export if original file was an OBJ
+        if ext == ".obj" and self.model_path and self.model_path.suffix.lower() == ".obj":
+            self._save_obj_stream(filepath)
+
+        elif ext == ".obj":
             scene = trimesh.Scene()
             for name, mesh in self.submeshes.items():
                 scene.add_geometry(mesh.copy(), node_name=name, geom_name=name)
@@ -200,6 +207,30 @@ class Body:
             for name, mesh in self.submeshes.items():
                 scene.add_geometry(mesh.copy(), node_name=name, geom_name=name)
             scene.export(str(filepath))
+
+    def _save_obj_stream(self, output_path: Path) -> None:
+        """Streams original OBJ line-by-line to preserve comments, mtllib, groups, and texture maps."""
+        if isinstance(self._scale, (int, float, np.number)):
+            sx = sy = sz = float(self._scale)
+        else:
+            scale_arr = np.atleast_1d(self._scale)
+            sx, sy, sz = float(scale_arr[0]), float(scale_arr[1]), float(scale_arr[2])
+
+        with open(self.model_path, "r", encoding="utf-8", errors="ignore") as infile, \
+             open(output_path, "w", encoding="utf-8") as outfile:
+
+            for line in infile:
+                # Match vertex coordinates strictly ('v ' with space, ignoring 'vt' or 'vn')
+                if line.startswith("v "):
+                    parts = line.strip().split()
+                    x, y, z = float(parts[1]), float(parts[2]), float(parts[3])
+                    
+                    x_scaled, y_scaled, z_scaled = x * sx, y * sy, z * sz
+                    
+                    extra_args = f" {' '.join(parts[4:])}" if len(parts) > 4 else ""
+                    outfile.write(f"v  {x_scaled:.6f} {y_scaled:.6f} {z_scaled:.6f}{extra_args}\n")
+                else:
+                    outfile.write(line)
 
     def _process_and_store_mesh(self, name: str, mesh: trimesh.Trimesh) -> None:
         """Validates watertightness, corrects face orientation, applies scale, and stores mesh."""
