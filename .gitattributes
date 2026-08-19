@@ -1,0 +1,2 @@
+# Exclude specific file extensions from language stats
+*.py linguist-detectable=false
